@@ -2,23 +2,18 @@
 
 namespace Database\Factories;
 
-use App\Models\Post;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<Post>
- */
 class PostFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         return [
-            //
+            'user_id'      => User::factory(),
+            'title'        => rtrim(fake()->sentence(6), '.'),
+            'body'         => fake()->paragraphs(3, true),
+            'is_published' => fake()->boolean(70),
         ];
     }
 }
