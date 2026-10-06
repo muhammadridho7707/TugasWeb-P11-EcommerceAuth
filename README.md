@@ -1,58 +1,159 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Tugas Rutin 11 — E-Commerce DB + Secure Auth
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+**Nama:** [nama kamu]
+**NIM:** [NIM kamu]
+**Mata kuliah:** [nama mata kuliah] — Pertemuan 11
 
-## About Laravel
+Aplikasi e-commerce sederhana dengan Laravel + Breeze: database terstruktur
+(7 tabel e-commerce), autentikasi, multi-role (admin/editor/user),
+dan otorisasi dengan Policy.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Teknologi
+- Laravel [versi] · PHP 8.3 · Laravel Breeze (Blade) · MySQL · Tailwind CSS
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
+## Cara Menjalankan
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone [url repo]
+cd TugasWeb-P11-EcommerceAuth
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+# atur DB_DATABASE di .env, lalu:
+php artisan migrate:fresh --seed
+npm run dev          # terminal 1
+php artisan serve    # terminal 2
 ```
+Buka http://localhost:8000
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Akun Testing (password: `password`)
+| Role | Email |
+|---|---|
+| admin | admin@example.com |
+| editor | editor@example.com |
+| editor | editor2@example.com |
+| user | user@example.com |
 
-## Contributing
+---
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+# Bagian A — Database & Eloquent
 
-## Code of Conduct
+## 1. Migrations (7 tabel + FK)
+| Tabel | Relasi / FK |
+|---|---|
+| categories | — |
+| products | category_id → categories |
+| addresses | user_id → users |
+| orders | user_id → users, address_id → addresses |
+| order_items | order_id → orders, product_id → products |
+| reviews | user_id → users, product_id → products |
+| cart_items | user_id → users, product_id → products |
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Tambahan: kolom `role` pada `users`, tabel `posts` (untuk PostPolicy).
 
-## Security Vulnerabilities
+![Migrate & Seed](screenshots/a0-migrate-seed.png)
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## 2. Seeder & Factory
+- Factory: Category, Product, Post, Order
+- Seeder: User, Product (54 produk realistis), Order, Post
+- Dijalankan dengan `php artisan migrate:fresh --seed`
 
-## License
+## 3. Model, Relationship, Scope
+| Model | Relasi | Scope |
+|---|---|---|
+| User | hasMany orders, addresses, reviews, cartItems, posts | — |
+| Category | hasMany products | — |
+| Product | belongsTo category; hasMany orderItems, reviews | `active()`, `inStock()` |
+| Order | belongsTo user, address; hasMany items | `paid()` |
+| Post | belongsTo author | `published()` |
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 4. Dokumentasi Query Tinker
+
+### Query 1 — Eager loading
+```php
+App\Models\Product::with('category')->take(5)->get(['id','name','price','category_id']);
+```
+Penjelasan: [isi penjelasan 1 kalimat]
+
+![Query 1](screenshots/a1-tinker-eager-loading.png)
+
+### Query 2 — Local scope
+```php
+App\Models\Product::active()->inStock()->orderBy('price')->take(5)->pluck('price','name');
+```
+Penjelasan: [isi]
+
+![Query 2](screenshots/a2-tinker-scope.png)
+
+### Query 3 — withCount
+```php
+App\Models\Category::withCount('products')->get(['id','name']);
+```
+Penjelasan: [isi]
+
+![Query 3](screenshots/a3-tinker-withcount.png)
+
+### Query 4 — Relasi bertingkat
+```php
+App\Models\User::where('email','user@example.com')->first()->orders()->with('items.product')->first()->items->pluck('product.name');
+```
+Penjelasan: [isi]
+
+![Query 4](screenshots/a4-tinker-relasi.png)
+
+### Query 5 — Agregat
+```php
+App\Models\Order::paid()->sum('total');
+```
+Penjelasan: [isi]
+
+![Query 5](screenshots/a5-tinker-agregat.png)
+
+---
+
+# Bagian B — Auth & Security
+
+## 5. Breeze (login / register / logout)
+![Register](screenshots/b1-register.png)
+![Login](screenshots/b2-login.png)
+
+## 6. Multi-role + Custom Middleware
+- Kolom `users.role`: `admin` | `editor` | `user`
+- Middleware: `app/Http/Middleware/RoleMiddleware.php`
+- Alias `role` didaftarkan di `bootstrap/app.php`
+- Pemakaian di route: `role:admin`, `role:admin,editor`
+
+![Dashboard admin](screenshots/b3-dashboard-admin.png)
+![Dashboard user](screenshots/b4-dashboard-user.png)
+
+## 7. PostPolicy
+| Aksi | admin | editor | user |
+|---|---|---|---|
+| Lihat daftar | ✅ | ✅ | ✅ |
+| Buat post | ✅ | ✅ | ❌ |
+| Edit/hapus post sendiri | ✅ | ✅ | ❌ |
+| Edit/hapus post orang lain | ✅ | ❌ | ❌ |
+
+![Editor edit post sendiri](screenshots/b7-editor-edit-post-sendiri.png)
+![Editor edit post orang lain (403)](screenshots/b8-editor-edit-post-orang-lain-403.png)
+![User tanpa tombol edit](screenshots/b9-user-tanpa-tombol-edit.png)
+
+## 8. Route Protection & Testing Incognito (2 role)
+Window biasa: [role A] · Window incognito: [role B]
+
+| Skenario | Hasil yang diharapkan | Bukti |
+|---|---|---|
+| Admin buka `/admin` | 200 | ![](screenshots/b5-admin-panel-200.png) |
+| User buka `/admin` | 403 | ![](screenshots/b6-user-admin-403.png) |
+| Tanpa login buka `/dashboard` | redirect ke login | [screenshot] |
+
+Daftar route:
+![route:list](screenshots/b10-route-list.png)
+
+---
+
+# Bonus
+- **Eager loading demo** — `/admin/eager-demo`: tanpa eager loading [N] query,
+  dengan `with('category')` [M] query.
+  ![Eager demo](screenshots/bonus-eager-demo.png)
+- **Filament admin panel** — [isi kalau dikerjakan, + screenshot]
